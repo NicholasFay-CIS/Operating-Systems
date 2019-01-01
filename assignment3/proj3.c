@@ -9,7 +9,6 @@
 #define MAXSUBs 50
 #define MAXTOPICS 1000
 #define MAXENTRIES 100
-
 //Condition Variable
 pthread_cond_t condition;
 
@@ -178,7 +177,7 @@ int getEntry(char *TEQ_ID, int entrynumber, topicEntry *topic) {
 	return 1;
 }
 
-int thread_safe_get_Entry(char *TEQ_ID, int entrynumber, topicEntry *topic) {
+int thread_safe_get_Entry(char *TEQ_ID) {
 	int i, fail;
 	int found = -1;
 	for(i = 0; i < cbrs; i++) {
@@ -192,6 +191,8 @@ int thread_safe_get_Entry(char *TEQ_ID, int entrynumber, topicEntry *topic) {
 	}
 	pthread_mutex_lock(&registry[i].m_lock);
 	//enqueue the topicEntry
+	topicEntry *topic;
+	int entrynumber = registry[i].e_Num;
 	fail = getEntry(TEQ_ID, entrynumber, topic);
 	//Unlock the given buffer
 	pthread_mutex_unlock(&registry[i].m_lock);
@@ -236,12 +237,63 @@ int dequeue() {
 
 /*----------------------------------------------------------------------------------------------*/
 void *Publisher(void *args) {
+	char *line;
+	const char dil[2] = " ";
+	ssize_t number_read;
+	size_t length = 0;
+	FILE *config;
 	pthread_mutex_t pub_lock;
 	pthread_mutex_lock(&pub_lock);
 	while(((table_e *)args)->file == "\0") {
 		pthread_cond_wait(&condition, &pub_lock);
 	}
-	printf("Publisher Thread created::::Thread ID: %d File: %s\n", pthread_self(),((table_e *)args)->file );
+	config = fopen(((table_e *)args)->file, "r");
+	number_read = getline(&line, &length, config);
+	do {
+		int i = 0;
+		char *token;
+		char *rem;
+		char string[100];
+		int z = 0;
+		char *line_array[1000];
+		token = strtok_r(line, dil, &rem);
+		while(token != NULL) {
+			if(token[0] == '"') {
+				int i;
+				int put = 0;
+				for(i = 1; token[i] != '"'; i++) {
+					string[put] = token[i];
+					put++;
+				}
+				line_array[z] = string;		
+			} else {
+				line_array[z] = token;
+			}
+			if(line_array[z][strlen(line_array[z])-1] == '\n') {
+				line_array[z][strlen(line_array[z])-1] = 0;
+			}
+			z++;
+			token = strtok_r(NULL, dil, &rem);
+		}
+		if(strcmp(line_array[0], "put") == 0) {
+			topicEntry TE;
+			strcpy(TE.photoURL, line_array[2]);
+			strcpy(TE.photoCaption, line_array[3]);
+			thread_safe_enqueue(line_array[1], TE);
+			printf("Proxy Thread: %d - type: Publisher- Executed Command: put\n", pthread_self());
+		}
+		if(strcmp(line_array[0], "sleep") == 0) {
+			int sleep_time;
+			sleep_time = atoi(line_array[1]);
+			sleep(sleep_time);
+			printf("Proxy Thread: %d - type: Publisher- Executed Command: sleep\n", pthread_self());
+		}
+		if(strcmp(line_array[0], "stop") == 0) {
+			printf("Proxy Thread: %d - type: Publisher- Executed Command: stop\n", pthread_self());
+			break;
+		}
+	} while((number_read = getline(&line, &length, config)) != -1);
+	printf("Proxy Thread: %d - type: Publisher\n", pthread_self());
 	strcpy(((table_e *)args)->file, "\0");
 	pthread_mutex_unlock(&pub_lock);
 	return;
@@ -249,19 +301,67 @@ void *Publisher(void *args) {
 
 /*----------------------------------------------------------------------------------------------*/
 void *Subscriber(void *args) {
+	char *line;
+	const char dil[2] = " ";
+	ssize_t number_read;
+	size_t length = 0;
+	FILE *config;
 	pthread_mutex_t sub_lock;
 	pthread_mutex_lock(&sub_lock);
 	while(((table_e *)args)->file == "\0") {
 		pthread_cond_wait(&condition, &sub_lock);
 	}
-	printf("Subscriber Thread created::::Thread ID: %d File: %s\n", pthread_self(), ((table_e *)args)->file);
+	config = fopen(((table_e *)args)->file, "r");
+	number_read = getline(&line, &length, config);
+	do {
+		int i = 0;
+		char *token;
+		char *rem;
+		char string[100];
+		int z = 0;
+		char *line_array[1000];
+		token = strtok_r(line, dil, &rem);
+		while(token != NULL) {
+			if(token[0] == '"') {
+				int i;
+				int put = 0;
+				for(i = 1; token[i] != '"'; i++) {
+					string[put] = token[i];
+					put++;
+				}
+				line_array[z] = string;		
+			} else {
+				line_array[z] = token;
+			}
+			if(line_array[z][strlen(line_array[z])-1] == '\n') {
+				line_array[z][strlen(line_array[z])-1] = 0;
+			}
+			z++;
+			token = strtok_r(NULL, dil, &rem);
+		}
+		if(strcmp(line_array[0], "get") == 0) {
+			thread_safe_get_Entry(line_array[1]);
+			printf("Proxy Thread: %d - type: Subscriber - Executed Command: get\n", pthread_self());
+		}
+		if(strcmp(line_array[0], "sleep") == 0) {
+			int sleep_time;
+			sleep_time = atoi(line_array[1]);
+			sleep(sleep_time);
+			printf("Proxy Thread: %d - type: Subscriber - Executed Command: sleep\n", pthread_self());
+		}
+		if(strcmp(line_array[0], "stop") == 0) {
+			printf("Proxy Thread: %d - type: Subscriber - Executed Command: stop\n", pthread_self());
+			break;
+		}
+	} while((number_read = getline(&line, &length, config)) != -1);
+	printf("Proxy Thread: %d - type: Subscriber\n", pthread_self());
 	strcpy(((table_e *)args)->file, "\0");
 	pthread_mutex_unlock(&sub_lock);
 	return;
 }
 /*----------------------------------------------------------------------------------------------*/
 void *CleanUp(void *args) {
-	int cleanup_time = 5;
+	int cleanup_time = Delta + 5;
 	double elapsed;
 	struct timeval start, current_time;
 	gettimeofday(&start, NULL);
@@ -363,14 +463,14 @@ int main(int argc, char *argv[]) {
 		if(strcmp(line_array[0], "query") == 0 && strcmp(line_array[1], "publishers") == 0) {
 			int p = 0;
 			while(p < pub_ind) {
-				printf("Publisher::::Thread ID: %d File Name %s\n", pub_t[p].id, pub_t[p].file);
+				printf("Proxy Thread: %d - type: Publisher - Command File Name %s\n", pub_t[p].id, pub_t[p].file);
 				p++;
 			}
 		}
 		if(strcmp(line_array[0], "query") == 0 && strcmp(line_array[1], "subscribers") == 0) {
 			int p = 0;
 			while(p < sub_ind) {
-				printf("Subscriber::::Thread ID: %d File Name %s\n", sub_t[p].id, sub_t[p].file);
+				printf("Proxy Thread: %d - type: Subsciber - Command File Name %s\n", sub_t[p].id, sub_t[p].file);
 				p++;
 			}
 		}

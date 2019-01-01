@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <string.h>
+#include <regex.h>
 
 #define MAXPUBs 50
 #define MAXSUBs 50
@@ -235,7 +236,6 @@ int dequeue() {
 
 /*----------------------------------------------------------------------------------------------*/
 void *Publisher(void *args) {
-	//printf("Publisher Thread created::::Thread ID: %d File: %s\n", pthread_self(),((table_e *)args)->file );
 	pthread_mutex_t pub_lock;
 	pthread_mutex_lock(&pub_lock);
 	while(((table_e *)args)->file == "\0") {
@@ -249,7 +249,6 @@ void *Publisher(void *args) {
 
 /*----------------------------------------------------------------------------------------------*/
 void *Subscriber(void *args) {
-	//printf("Subscriber Thread created::::Thread ID: %d File: %s\n", pthread_self(), ((table_e *)args)->file);
 	pthread_mutex_t sub_lock;
 	pthread_mutex_lock(&sub_lock);
 	while(((table_e *)args)->file == "\0") {
@@ -271,9 +270,10 @@ void *cleanup(void *args) {
 int main(int argc, char *argv[]) {
 	int l;
 	char *line;
+	regex_t regex;
+	int reg_s;
 	const char dil[2] = " ";
 	ssize_t number_read;
-	char *token;
 	size_t length = 0;
 	FILE *config;
 	int reg_q_index = 0;
@@ -282,17 +282,29 @@ int main(int argc, char *argv[]) {
 	config = fopen(argv[1], "r");
 	number_read = getline(&line, &length, config);
 	do {
+		char *token;
+		char *rem;
+		char strings[100];
 		int z = 0;
 		int count = 0;
+		int kill = 0;
 		char *line_array[1000];
-		token = strtok(line, dil);
+		sscanf(line, "%*[^\"]\"%31[^\"]\"", strings);
+		token = strtok_r(line, dil, &rem);
 		while(token != NULL) {
-			line_array[z] = token;
+			if(token[0] == '"') {
+				while(token != NULL && token[strlen(token)-1] != '"') {
+					token = strtok_r(NULL, dil, &rem);
+				}
+				line_array[z] = strings;
+			} else {
+				line_array[z] = token;
+			}
 			if(line_array[z][strlen(line_array[z])-1] == '\n') {
 				line_array[z][strlen(line_array[z])-1] = 0;
 			}
 			z++;
-			token = strtok(NULL, dil);
+			token = strtok_r(NULL, dil, &rem);
 			count++;
 		}
 		if(strcmp(line_array[0], "create") == 0) {
@@ -354,7 +366,7 @@ int main(int argc, char *argv[]) {
 			Delta = delta;
 		}
 		if(strcmp(line_array[0], "start") == 0) {
-			//pthread_cond_broadcast(&condition);
+			pthread_cond_broadcast(&condition);
 		}
 
 	} while((number_read = getline(&line, &length, config) != -1));

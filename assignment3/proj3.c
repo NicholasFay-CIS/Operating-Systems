@@ -260,8 +260,21 @@ void *Subscriber(void *args) {
 	return;
 }
 /*----------------------------------------------------------------------------------------------*/
-void *cleanup(void *args) {
-	dequeue();
+void *CleanUp(void *args) {
+	int cleanup_time = 5;
+	double elapsed;
+	struct timeval start, current_time;
+	gettimeofday(&start, NULL);
+	while(1) {
+		gettimeofday(&current_time, NULL);
+		elapsed = (current_time.tv_sec - start.tv_sec) + ((current_time.tv_usec - start.tv_usec)/1000000.0);
+		if(elapsed >= cleanup_time) {
+			dequeue();
+			gettimeofday(&start, NULL);
+		} else {
+			sched_yield();
+		}
+	}
 	return;
 }
 /*----------------------------------------------------------------------------------------------*/
@@ -371,13 +384,21 @@ int main(int argc, char *argv[]) {
 
 	} while((number_read = getline(&line, &length, config) != -1));
 
+	//spawn the cleanup thread
+	pthread_t cleanup_t;
+	pthread_create(&cleanup_t, NULL, CleanUp, NULL);
+
+	//Join publisher thread
 	for(l = 0; l < pub_ind; l++) {
 		pthread_join(pub_t[l].id, NULL);
 	}
+
+	//Join subscriber threads
 	for(l = 0; l < sub_ind; l++) {
 		pthread_join(sub_t[l].id, NULL);
 	}
 
-
+	//Join cleanup thread
+	pthread_join(cleanup_t, NULL);
 	return 1;
 }

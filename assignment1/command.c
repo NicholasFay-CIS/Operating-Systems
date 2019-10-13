@@ -9,7 +9,7 @@
 
 void listDir() {	
 	struct dirent *dentry;
-	char curr_dir[1000];
+	char curr_dir[PATH_MAX];
 	DIR *directory;
 
 	getcwd(curr_dir, sizeof(curr_dir));
@@ -21,7 +21,8 @@ void listDir() {
 	{
 		printf("%s ", dentry->d_name);
 	}
-	closedir(directory);	
+	closedir(directory);
+	printf("\n");	
 	return;	
 }
 
@@ -33,66 +34,58 @@ void showCurrentDir() {
 }
 
 void makeDir(char *dirName) {
-	char *token;
-	const char dil[2] = " ";
-	int count = 0;
-	
-	token = strtok(dirName, dil);
-	while(token != NULL) 
-	{ 
-		if(count == 1) 
-		{	int i = 0;
-			for(i; token[i] != '\0'; i++) {
-				if(token[i] == '\n') {
-					token[i] = 0;
-				}
-			}
-			mkdir(token, S_IRWXU);
-		}
-		token = strtok(NULL, dil);
-		count++;
-	}
+	mkdir(dirName, S_IRWXU);
 	return;
 }
 
 
 void changeDir(char *dirName) {
-	char *token;
-	const char *dil = " ";
-	int count = 0;
-	char path[300];
-	
-	token = strtok(dirName, dil);
-	while(token != NULL)
-	{	
-		if(count == 1)
-		{	printf("%s\n", token);
-			sprintf(path, "%s", token);
-			printf("%s\n", path);	
-			chdir(path);
-		}
-		count++;
-		token = strtok(NULL, dil);
-	}
+	char path[300];	
+	printf("%s\n", dirName);
+	sprintf(path, "%s", dirName);
+	printf("%s\n", path);	
+	chdir(path);
 	return;
 }
 
+void deleteFile(char * filepath)
+{
+	unlink(filepath);
+	return;
+}
+void copyFile(char *sourcePath, char *destinationPath)
+{
+	int fd, fd2;
+	int nchars;
+	char buffer[PATH_MAX];
+	
+	fd = open(sourcePath, O_RDONLY);
+	fd2 = open(destinationPath, O_WRONLY | O_CREAT, S_IRWXU);
+	while((nchars = read(fd, buffer, PATH_MAX)) > 0) {
+		write(fd2, buffer, nchars);
+	}
+	close(fd);
+	close(fd2);
+	return;
+}
 
 void displayFile(char *filename) {
 	int fd;
 	int nchars;
-	char buffer[1000];
-	int count = 0;
-	char *token;
-	
-	const char* dil = " ";
+	char buffer[PATH_MAX];
 	
 	fd = open(filename, O_RDONLY);	
-	while((nchars = read(fd, buffer, 1000)) > 0) {
+	while((nchars = read(fd, buffer, PATH_MAX)) > 0) {
 		write(1, buffer, nchars);
 	}
 	printf("\n");
 	close(fd);
+}
+
+void moveFile(char *sourcePath, char *destinationPath)
+{
+	rename(sourcePath, destinationPath);
+	return;
 }
 
 int isCMD(char *token)
@@ -114,4 +107,5 @@ int isCMD(char *token)
 	}
 	return 0;
 }
+
 											

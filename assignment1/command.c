@@ -41,9 +41,7 @@ void makeDir(char *dirName) {
 
 void changeDir(char *dirName) {
 	char path[300];	
-	printf("%s\n", dirName);
-	sprintf(path, "%s", dirName);
-	printf("%s\n", path);	
+	sprintf(path, "%s", dirName);	
 	chdir(path);
 	return;
 }
@@ -92,16 +90,10 @@ int isCMD(char *token)
 {
 	char *cmd[9] = {"ls", "pwd", "mkdir", "cd", "cp", "mv", "rm", "cat" };	
 	int i = 0;
-	for(i; token[i] != '\0'; i++) {
-		if(token[i] == '\n') {
-			token[i] = 0;
-		}
-	}
-	i = 0;
-	for(i; i < 9; i++)
+	for(i; i < 8; i++)
 	{
 		if(strcmp(cmd[i], token) == 0)
-		{
+		{	
 			return 1;
 		}
 	}

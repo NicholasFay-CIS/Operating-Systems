@@ -44,10 +44,8 @@ int main(int argc, char *argv[]) {
 		getline(&line, &len, stdin);
 		token = strtok(line, dil);
 		while(token != NULL)
-		{	
-			int valid;
-			valid = isCMD(token);
-				
+		{
+			int valid = isCMD(token);		
 			if(strcmp(token, "exit\n") == 0) 
 			{	
 				exit = 1;
@@ -57,70 +55,92 @@ int main(int argc, char *argv[]) {
 			{
 				break;
 			}
-			if(strcmp(token, "ls") == 0)
-			{	
-				char *cmd = token;
-				token = strtok(NULL, dil);
-				if(strcmp(token, ";\n") == 0 || strcmp(token, ";") == 0) {
-					listDir();
-				}
-				else {
-					printf("Error! Unsupported arguments for command: ls\n"); 
-				}
-			}
-			if(strcmp(token, "pwd") == 0) 
-			{	 
-				char *cmd = token;
-				token = strtok(NULL, dil);
-				if(strcmp(token, ";\n") == 0 || strcmp(token, ";") == 0) {
-					showCurrentDir();
-				}
-			}
-			if(strcmp(token, "rm") == 0)
-			{
-				int fd;
-				token = strtok(NULL, dil);
-				fd = open(token, O_RDONLY);
-				if(fd != -1) {
-					char *file = token;
+			if(valid == 1) {
+				if(strcmp(token, "ls") == 0)
+				{	
+					char *cmd = token;
 					token = strtok(NULL, dil);
-					if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0) {
-						deleteFile(file);
-					}		
+					if(strcmp(token, ";\n") == 0 || strcmp(token, ";") == 0) {
+						listDir();
+					}
+					else {
+						printf("Error! Unsupported arguments for command: ls\n"); 
+					}
 				}
-				close(fd);
-			}
-			if(strcmp(token, "cd") == 0) 
-			{
-				token = strtok(NULL, dil);
-				if(strcmp(token, ";") != 0 || strcmp(token, ";\n") != 0) 
-				{
-					char *dir_ = token;
+				if(strcmp(token, "pwd") == 0) 
+				{	 
+					char *cmd = token;
 					token = strtok(NULL, dil);
-					if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0)
-					{
-						changeDir(dir_);
-					}	
+					if(strcmp(token, ";\n") == 0 || strcmp(token, ";") == 0) {
+						showCurrentDir();
+					}
 				}
-					
-			}
-			if(strcmp(token, "cat") == 0)
-			{
-				token = strtok(NULL, dil);
-				if(strcmp(token, ";") != 0 || strcmp(token, ";\n") != 0)
+				if(strcmp(token, "rm") == 0)
 				{
-					char *file = token;
 					int fd;
+					token = strtok(NULL, dil);
 					fd = open(token, O_RDONLY);
-					if(fd != -1)
-					{
+					if(fd != -1) {
+						char *file = token;
 						token = strtok(NULL, dil);
-						if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0)
+						if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0) {
+							deleteFile(file);
+						}		
+					}
+					close(fd);
+				}
+				if(strcmp(token, "cd") == 0) 
+				{
+					token = strtok(NULL, dil);
+					char *dir = token;
+					if(strcmp(token, ";") != 0 || strcmp(token, ";\n") != 0)
+					{	
+						token = strtok(NULL, dil);
+						if(token == NULL) {
+							break;
+						}
+						else if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0) {
+							changeDir(dir);
+						}
+					
+					}
+						
+				}
+				if(strcmp(token, "cat") == 0)
+				{
+					token = strtok(NULL, dil);
+					if(strcmp(token, ";") != 0 || strcmp(token, ";\n") != 0)
+					{
+						char *file = token;
+						int fd;
+						fd = open(token, O_RDONLY);
+						if(fd != -1)
 						{
-							displayFile(file);
+							token = strtok(NULL, dil);
+							if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0)
+							{
+								displayFile(file);
+							}
 						}
 					}
 				}
+				if(strcmp(token, "mkdir") == 0)
+				{
+					token = strtok(NULL, dil);
+					char *dir = token;
+					token = strtok(NULL, dil);
+					if(token == NULL)
+					{
+						printf("Error!: Incorrect positional arguments for command: mkdir.\n");
+					}
+					else if(strcmp(token, ";\n") == 0){
+						makeDir(dir);
+					}
+				}
+
+
+			}else {
+				printf("Error: command not found\n");
 			}			
 			token = strtok(NULL, dil);
 		}

@@ -6,8 +6,10 @@
 #include <unistd.h>
 #include "command.h"
 #include <dirent.h>
+int STREAM;
 
-void listDir() {	
+
+void listDir() {
 	struct dirent *dentry;
 	char curr_dir[PATH_MAX];
 	DIR *directory;
@@ -15,21 +17,30 @@ void listDir() {
 	getcwd(curr_dir, sizeof(curr_dir));
 	directory = opendir(curr_dir);
 	if(!directory) {
-		printf("ERROR: Cannot read from empty directory");
+		//printf("ERROR: Cannot read from empty directory");
+		char *error = "ERROR: Cannot read from empty directory";
+		write(STREAM, error, sizeof(char)*strlen(curr_dir));
+		write(STREAM, "\n", sizeof("\n"));
+		return;
 	}
-	while(dentry = readdir(directory)) 
-	{
-		printf("%s ", dentry->d_name);
-	}
+	dentry = readdir(directory);
+	do {
+		char *filename = dentry->d_name;
+		write(STREAM, filename, sizeof(char)*strlen(filename));
+		write(STREAM, " ", sizeof(" "));
+
+	} while(dentry = readdir(directory));
 	closedir(directory);
-	printf("\n");	
+	write(STREAM, "\n", sizeof("\n"));	
 	return;	
 }
 
 void showCurrentDir() {
 	char curr_dir[PATH_MAX];
 	getcwd(curr_dir, sizeof(curr_dir));
-	printf("%s\n", curr_dir);
+	//printf("%s\n", curr_dir);
+	write(STREAM, curr_dir, sizeof(char)*strlen(curr_dir));
+	write(STREAM, "\n", sizeof("\n"));
 	return; 
 }
 
@@ -42,17 +53,25 @@ void makeDir(char *dirName) {
 	getcwd(curr_dir, sizeof(curr_dir));
 	directory = opendir(curr_dir);
 	if(!directory) {
-		printf("ERROR: Cannot read from empty directory");
+		char *error = "ERROR: Cannot read from empty directory";
+		write(STREAM, error, sizeof(char)*strlen(curr_dir));
+		write(STREAM, "\n", sizeof("\n"));
+		//printf("ERROR: Cannot read from empty directory");
+		return;
 	}
-	while(dentry = readdir(directory)) 
-	{
+	dentry = readdir(directory);
+	//while(dentry = readdir(directory)) 
+	do {
 		if(strcmp(dirName, dentry->d_name) == 0)
 		{
-			printf("Error! Directory %s already exists\n", dirName);
+			char *error2 = "Error! Directory already exists";
+			write(STREAM, error2, sizeof(char)*strlen(error2));
+			write(STREAM, "\n", sizeof("\n"));
+			//printf("Error! Directory %s already exists\n", dirName);
 			closedir(directory);
 			return;
 		}
-	}
+	} while(dentry = readdir(directory));
 	closedir(directory);	
 	mkdir(dirName, S_IRWXU);
 	return;
@@ -60,7 +79,7 @@ void makeDir(char *dirName) {
 
 
 void changeDir(char *dirName) {
-	char path[300];	
+	char path[PATH_MAX];	
 	sprintf(path, "%s", dirName);	
 	chdir(path);
 	return;
@@ -68,7 +87,33 @@ void changeDir(char *dirName) {
 
 void deleteFile(char * filepath)
 {
-	unlink(filepath);
+	struct dirent *dentry;
+	char curr_dir[PATH_MAX];
+	DIR *directory;
+
+	getcwd(curr_dir, sizeof(curr_dir));
+	directory = opendir(curr_dir);
+	if(!directory) {
+		char *error = "ERROR: Cannot read from empty directory";
+		write(STREAM, error, sizeof(char)*strlen(error));
+		write(STREAM, "\n", sizeof("\n"));
+		return;
+		//printf("ERROR: Cannot read from empty directory");
+	}
+	dentry = readdir(directory); 
+	do {
+		if(strcmp(filepath, dentry->d_name) == 0)
+		{
+			unlink(filepath);
+			closedir(directory);
+			return;
+		}
+	} while(dentry = readdir(directory));
+	closedir(directory);
+	//printf("Error!: No such file exists.\n");
+	char *error2 = "Error!: No such file exists.";
+	write(STREAM, error2, sizeof(char)*strlen(error2));
+	write(STREAM, "\n", sizeof("\n"));
 	return;
 }
 
@@ -80,9 +125,18 @@ void copyFile(char *sourcePath, char *destinationPath)
 	
 	fd = open(sourcePath, O_RDONLY);
 	fd2 = open(destinationPath, O_WRONLY | O_CREAT, S_IRWXU);
-	while((nchars = read(fd, buffer, PATH_MAX)) > 0) {
+	if (fd == -1 || fd2 == -1) {
+		//printf("Error!: Issue opening file(s).\n");
+		char *error = "Error!: Issue opening source file";
+		write(STREAM, error, sizeof(char)*strlen(error));
+		write(STREAM, "\n", sizeof("\n"));
+		close(fd2);
+		return;
+	} 
+	nchars = read(fd, buffer, PATH_MAX);
+	do {
 		write(fd2, buffer, nchars);
-	}
+	} while((nchars = read(fd, buffer, PATH_MAX)) > 0);
 	close(fd);
 	close(fd2);
 	return;
@@ -94,16 +148,45 @@ void displayFile(char *filename) {
 	char buffer[PATH_MAX];
 	
 	fd = open(filename, O_RDONLY);	
-	while((nchars = read(fd, buffer, PATH_MAX)) > 0) {
-		write(1, buffer, nchars);
+	if(fd == -1) {
+		//printf("Error!: File %s cannot be opened.\n", filename);
+		char *error = "Error!: File cannot be opened.";
+		write(STREAM, error, sizeof(char)*strlen(error));
+		write(STREAM, "\n", sizeof("\n"));
+		return;
 	}
-	printf("\n");
+	nchars = read(fd, buffer, PATH_MAX);
+	do{
+		write(1, buffer, nchars);
+	} while((nchars = read(fd, buffer, PATH_MAX)) > 0);
+	//printf("\n");
+	write(STREAM, "\n", sizeof("\n"));
 	close(fd);
 }
 
 void moveFile(char *sourcePath, char *destinationPath)
 {
-	rename(sourcePath, destinationPath);
+	int fd, fd2;
+	int nchars;
+	char buffer[PATH_MAX];
+	fd = open(sourcePath, O_RDONLY);
+	fd2 = open(destinationPath, O_WRONLY | O_CREAT, S_IRWXU);
+	if (fd == -1) {
+		//printf("Error!: Issue opening file(s).\n");
+		char *error = "Error!: Issue opening file(s)";
+		write(STREAM, error, sizeof(char)*strlen(error));
+		write(STREAM, "\n", sizeof("\n"));
+		close(fd2);
+		return;
+	}
+	nchars = read(fd, buffer, PATH_MAX);
+	do {
+		write(fd2, buffer, nchars);
+	} while((nchars = read(fd, buffer, PATH_MAX)) > 0);
+	//rename(sourcePath, destinationPath);
+	close(fd);
+	close(fd2);
+	deleteFile(sourcePath);
 	return;
 }
 

@@ -24,127 +24,197 @@ int main(int argc, char *argv[]) {
 		printf("Error: too many arguments given\n");
 		return 1;
 	} 
-	if(argc == 3) 
+	if(argc == 2)
 	{
-		int fd;
-		fd = open(argv[2], O_RDONLY);
-		if(fd != -1) 
+		if(strcmp(argv[1], "-command") != 0)
 		{
-			fout = fopen("output.txt", "w");
-			fin = fopen(argv[2], "r");
-			filemode = 1;			
-		} else {
-		 	printf("Error: non text file given\n");
-			return 1;
+			printf("Error: input argument failure\n");
+			return;
 		}
 	}														
 	while(exit != 1)
-	{
+	{	
+		int good = 0;
+		char *param;
+		char *param2;
+		int valid = 0;
 		printf(">>> ");
 		getline(&line, &len, stdin);
+		char *array[sizeof(line)];
+		int i = 0;
+		int count = 0;
 		token = strtok(line, dil);
-		while(token != NULL)
-		{
-			int valid = isCMD(token);		
-			if(strcmp(token, "exit\n") == 0) 
-			{	
+		while(token != NULL) {
+			array[i] = token;
+			if(array[i][strlen(array[i])-1] == '\n')
+			{
+				array[i][strlen(array[i])-1] = 0;
+			}
+			i++;
+			count++;
+			token = strtok(NULL, dil);
+		}
+		array[i] = "\0";
+		i = 0;
+		while(array[i] != "\0") {
+
+			valid = isCMD(array[i]);
+			if(strcmp(array[i], "exit") == 0 || strcmp(array[i], "exit\n") == 0) {
 				exit = 1;
 				break;
-			}			
-			if(strcmp(token, "\n") == 0) 
+			}
+			else if(strcmp(array[i], "\n") == 0)
 			{
 				break;
 			}
-			if(valid == 1) {
-				if(strcmp(token, "ls") == 0)
-				{	
-					char *cmd = token;
-					token = strtok(NULL, dil);
-					if(strcmp(token, ";\n") == 0 || strcmp(token, ";") == 0) {
-						listDir();
-					}
-					else {
-						printf("Error! Unsupported arguments for command: ls\n"); 
-					}
-				}
-				if(strcmp(token, "pwd") == 0) 
-				{	 
-					char *cmd = token;
-					token = strtok(NULL, dil);
-					if(strcmp(token, ";\n") == 0 || strcmp(token, ";") == 0) {
-						showCurrentDir();
-					}
-				}
-				if(strcmp(token, "rm") == 0)
+			else if(strcmp(array[i], "ls") == 0)
+			{	
+				valid = isCMD(array[i+1]);
+				if(strcmp(array[i+1], ";") != 0 && strcmp(array[i+1], "\0") != 0) 
 				{
-					int fd;
-					token = strtok(NULL, dil);
-					fd = open(token, O_RDONLY);
-					if(fd != -1) {
-						char *file = token;
-						token = strtok(NULL, dil);
-						if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0) {
-							deleteFile(file);
-						}		
-					}
-					close(fd);
+					printf("Error!: Unsupported arguments for command: ls\n");	
+					break;
 				}
-				if(strcmp(token, "cd") == 0) 
+				if(strcmp(array[i], "ls") == 0 && valid != 1) 
 				{
-					token = strtok(NULL, dil);
-					char *dir = token;
-					if(strcmp(token, ";") != 0 || strcmp(token, ";\n") != 0)
-					{	
-						token = strtok(NULL, dil);
-						if(token == NULL) {
-							break;
-						}
-						else if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0) {
-							changeDir(dir);
-						}
-					
-					}
-						
+					listDir();
+				} else {
+					printf("Error!: Unsupported arguments for command: ls\n");
+					break;
 				}
-				if(strcmp(token, "cat") == 0)
+			}
+			else if(strcmp(array[i], "pwd") == 0)
+			{
+				valid = isCMD(array[i+1]);
+				if(strcmp(array[i+1], ";") != 0 && strcmp(array[i+1], "\0") != 0)
 				{
-					token = strtok(NULL, dil);
-					if(strcmp(token, ";") != 0 || strcmp(token, ";\n") != 0)
-					{
-						char *file = token;
-						int fd;
-						fd = open(token, O_RDONLY);
-						if(fd != -1)
-						{
-							token = strtok(NULL, dil);
-							if(strcmp(token, ";") == 0 || strcmp(token, ";\n") == 0)
-							{
-								displayFile(file);
-							}
-						}
-					}
+					printf("Error!: Unsupported arguments for command: pwd\n");
+					break;
 				}
-				if(strcmp(token, "mkdir") == 0)
+				if(strcmp(array[i], "pwd") == 0 && valid != 1)
 				{
-					token = strtok(NULL, dil);
-					char *dir = token;
-					token = strtok(NULL, dil);
-					if(token == NULL)
-					{
-						printf("Error!: Incorrect positional arguments for command: mkdir.\n");
-					}
-					else if(strcmp(token, ";\n") == 0){
-						makeDir(dir);
-					}
+					showCurrentDir();
+				} else {
+					printf("Error!: Unsupported arguments for command: pwd\n");
+					break;
 				}
-
-
-			}else {
-				printf("Error: command not found\n");
-			}			
-			token = strtok(NULL, dil);
+			}
+			else if(strcmp(array[i], "cd") == 0)
+			{
+				valid = isCMD(array[i+1]);
+				if((strcmp(array[i+2], ";") == 0 && count == 3) || count == 1 )
+				{
+					printf("Error!: Unsupported arguments for command: cd\n");
+					break;
+				}
+				if((strcmp(array[i+2], "\0") == 0) || (count > 3 && strcmp(array[i+2], ";") == 0))
+				{	char *param = array[i+1];
+					changeDir(param);
+					good = 1;
+				} else {
+					printf("Error!: Unsupported arguments for command: cd\n");
+					break;
+				}
+			}
+			else if(strcmp(array[i], "cat") == 0)
+			{
+				if((strcmp(array[i+2], ";") == 0 && count == 3) || count == 1)
+				{
+					printf("Error!: Unsupported arguments for command: cat\n");
+					break;
+				}
+				if((strcmp(array[i+2], "\0") == 0) || (count > 3 && strcmp(array[i+2], ";") == 0))
+				{
+					char *param = array[i+1];
+					displayFile(param);
+					good = 1;
+				} else {
+					printf("Error!: Unsupported arguments for command: cat\n");
+					break;
+				}
+			}
+			
+			else if(strcmp(array[i], "rm") == 0)
+			{
+				if((strcmp(array[i+2], ";") == 0 && count == 3) || count == 1)
+				{
+					printf("Error!: Unsupported arguments for command: rm\n");
+					break;
+				}
+				if((strcmp(array[i+2], "\0") == 0) || (count > 3 && strcmp(array[i+2], ";") == 0))	
+				{	char *param = array[i+1];
+					deleteFile(param);
+					good = 1;
+				} else {
+					printf("Error!: Unsupported arguments for command: rm\n");
+					break;
+				}
+			}
+			
+			else if(strcmp(array[i], "mkdir") == 0)
+			{
+				if((strcmp(array[i+2], ";") == 0 && count == 3) || count == 1)
+				{
+					printf("Error!: Unsupported arguments for command: mkdir\n");
+					break;
+				}
+				if((strcmp(array[i+2], "\0") == 0) || (count > 3 && strcmp(array[i+2], ";") == 0))
+				{		
+					char *param = array[i+1];
+					makeDir(param);
+					good = 1;
+				} else {
+					printf("Error!: Unsupported arguments for command: mkdir\n");
+					break;
+				}
+			}		
+			else if(strcmp(array[i], "mv") == 0)
+			{
+				if(strcmp(array[i+1], "\0") == 0 || strcmp(array[i+2], "\0") == 0) 
+				{
+					printf("Error!: Unsupported arguments for command: mv\n");
+					break;
+				}
+				if((strcmp(array[i+3], "\0") == 0) || (count > 4 && strcmp(array[i+3], ";") == 0))
+				{		
+					char *param = array[i+1];
+					char *param2 = array[i+2];
+					moveFile(param, param2);
+					good = 1;
+				} else {
+					printf("Error!: Unsupported arguments for command: mv\n");
+					break;
+				}
+			}
+			
+			else if(strcmp(array[i], "cp") == 0)
+			{
+				if(strcmp(array[i+1], "\0") == 0 || strcmp(array[i+2], "\0") == 0) 
+				{
+					printf("Error!: Unsupported arguments for command: cp\n");
+					break;
+				}
+				if((strcmp(array[i+3], "\0") == 0) || (count > 4 && strcmp(array[i+3], ";") == 0))
+				{		
+					char *param = array[i+1];
+					char *param2 = array[i+2];
+					moveFile(param, param2);
+					good = 1;
+				} else {
+					printf("Error!: Unsupported arguments for command: cp\n");
+					break;
+				}
+			}
+			else if(strcmp(array[i], ";") == 0) {
+				good = 0;
+			}
+			else {
+				if(good != 1 && strcmp(array[i], ";") != 0) { 
+					printf("else: %s\n", array[i]);
+				}
+			}
+			i++;
 		}
-
 	}
 	if(filemode == 1) 
 	{

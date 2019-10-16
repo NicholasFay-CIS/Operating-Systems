@@ -34,6 +34,26 @@ void showCurrentDir() {
 }
 
 void makeDir(char *dirName) {
+	
+	struct dirent *dentry;
+	char curr_dir[PATH_MAX];
+	DIR *directory;
+
+	getcwd(curr_dir, sizeof(curr_dir));
+	directory = opendir(curr_dir);
+	if(!directory) {
+		printf("ERROR: Cannot read from empty directory");
+	}
+	while(dentry = readdir(directory)) 
+	{
+		if(strcmp(dirName, dentry->d_name) == 0)
+		{
+			printf("Error! Directory %s already exists\n", dirName);
+			closedir(directory);
+			return;
+		}
+	}
+	closedir(directory);	
 	mkdir(dirName, S_IRWXU);
 	return;
 }
@@ -51,6 +71,7 @@ void deleteFile(char * filepath)
 	unlink(filepath);
 	return;
 }
+
 void copyFile(char *sourcePath, char *destinationPath)
 {
 	int fd, fd2;

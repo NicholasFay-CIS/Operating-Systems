@@ -7,7 +7,7 @@
 #include <signal.h>
 #include <time.h>
 
-/* Signaler and Handler functions */
+/* Signaler and Handler functions and globals */
 /*---------------------------------------------------------------------------*/
 int PROGRAM_COUNT;
 pid_t pid[5];

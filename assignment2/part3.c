@@ -193,6 +193,8 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 	}
-	//signaler(pid, SIGCONT, 0);
+	free(token);
+	free(line_buffer);
+	fclose(fin);
 	return 1;
 }

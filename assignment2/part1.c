@@ -77,5 +77,8 @@ int main(int argc, char *argv[]) {
 	for(k; k < program_count; k++) {
 		wait_pid = waitpid(pid[k], &wait_status, WUNTRACED | WCONTINUED);
 	}
+	free(token);
+	free(line_buffer);
+	fclose(fin);
 	return 1;
 }

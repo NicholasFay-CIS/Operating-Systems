@@ -101,11 +101,11 @@ int main(int argc, char *argv[]) {
 			wait_return = sigwait(&signal_set, pointer_signal);
 			if(wait_return > 0) {
 				printf("Error!: Sigwait failed\n");
-			} else if( wait_return == 0) {
+			} /*else if( wait_return == 0) {
 				if(*pointer_signal == 10) {
-					printf("received siguser signal\n");
+					printf("Received SIGUSR1 signal: 10\n");
 				}
-			}
+			} */
 			execvp(args_array[0], args_array);
 			printf("\nError!: Invalid executable\n\n");
 			exit(-1);
@@ -123,5 +123,8 @@ int main(int argc, char *argv[]) {
 		//use zero for the untraced
 		wait_pid = waitpid(pid[k], &wait_status, 0);
 	}
+	free(token);
+	free(line_buffer);
+	fclose(fin);
 	return 1;
 }

@@ -24,6 +24,10 @@ int main(int argc, char *argv[]) {
 	}
 	//open input file
 	fin = fopen(argv[1], "r");
+	if(fin == NULL) {
+		printf("Cant open text file\n");
+		return 1;
+	}
 	int program_count = 0;
 	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
 		program_count++;
@@ -36,7 +40,7 @@ int main(int argc, char *argv[]) {
 	pid_t pid[program_count];
 	pid_t wait_pid;
 	int wait_status;
-	//number_of_lines = count;
+	//loop through the input file
 	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
 		
 		i = 0;
@@ -70,7 +74,7 @@ int main(int argc, char *argv[]) {
 			printf("\nError!: Invalid executable\n\n");
 			exit(-1);
 		}
-		//wait_pid = waitpid(pid[j], &wait_status, WUNTRACED | WCONTINUED);
+		//go to next spot in the array
 		j++;
 	}
 	int k = 0;

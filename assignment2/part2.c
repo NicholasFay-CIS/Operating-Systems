@@ -46,6 +46,10 @@ int main(int argc, char *argv[]) {
 	}
 	//open input file
 	fin = fopen(argv[1], "r");
+	if(fin == NULL) {
+		printf("Cant open text file\n");
+		return 1;
+	}
 	int program_count = 0;
 	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
 		program_count++;
@@ -58,7 +62,7 @@ int main(int argc, char *argv[]) {
 	pid_t pid[program_count];
 	pid_t wait_pid;
 	int wait_status;
-	//number_of_lines = count;
+	//go through the input.txt file
 	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
 		int int_sig;
 		//then create a pointer to that integers address, this is what we will
@@ -97,15 +101,11 @@ int main(int argc, char *argv[]) {
 
 		//its a child process
 		if(pid[j] == 0) {
-			//sigaction(SIGUSR1, &action, NULL);
+			//sig wait call 
 			wait_return = sigwait(&signal_set, pointer_signal);
 			if(wait_return > 0) {
 				printf("Error!: Sigwait failed\n");
-			} /*else if( wait_return == 0) {
-				if(*pointer_signal == 10) {
-					printf("Received SIGUSR1 signal: 10\n");
-				}
-			} */
+			} 
 			execvp(args_array[0], args_array);
 			printf("\nError!: Invalid executable\n\n");
 			exit(-1);
@@ -113,10 +113,13 @@ int main(int argc, char *argv[]) {
 		j++;
 	}
 	sleep(3);
+	//call siguser
 	signaler(pid, SIGUSR1);
 	sleep(3);
+	//stop all the processes
 	signaler(pid, SIGSTOP);
 	sleep(3);
+	//continue all the processes
 	signaler(pid, SIGCONT);
 	int k = 0;
 	for(k; k < program_count; k++) {

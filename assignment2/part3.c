@@ -59,17 +59,20 @@ void hdl(int signal_number) {
 }
 
 int all_children_exited(pid_t *pid) {
-	int is_exited = 0;
+	int arrray[PROGRAM_COUNT];
 	pid_t wait_pid;
 	int wait_status;
 	int i;
-	for(i = 0; i < sizeof(pid); i++) {
+	for(i = PROGRAM_COUNT; i > 0; i--) {
 		wait_pid = waitpid(pid[i], &wait_status, WNOHANG);
-		if(WIFEXITED(wait_status) == 0) {
-			is_exited = 1;
+		arrray[i] = wait_pid;
+	}
+	for(i = PROGRAM_COUNT; i > 0; i--) {
+		if(arrray[i] == 0) {
+			return 1;
 		}
 	}
-	return is_exited;
+	return 0;
 }
 /*----------------------------------------------------------------------------*/
 int number_of_lines;

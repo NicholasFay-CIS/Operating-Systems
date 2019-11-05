@@ -29,9 +29,8 @@ void hdl(int signal_number) {
 		if(INDEX < 0) {
 			INDEX = PROGRAM_COUNT-1;
 		}
-		//printf("Entering First loop\n");
+		//stop the running process then start the next
 		wait_pid = waitpid(pid[INDEX], &wait_status, WNOHANG);
-		//printf("Wait status is %d\n", wait_status);
 		if(wait_status != -1) {
 			printf("Sending Signal 19 to pid: %d\n", pid[INDEX]);
 			kill(pid[INDEX], SIGSTOP);
@@ -43,7 +42,7 @@ void hdl(int signal_number) {
 	}
 
 	while(1) {
-		//printf("Entering Second loop\n");
+		//continue the correct stop pid
 		if(INDEX < 0) {
 			INDEX = PROGRAM_COUNT-1;
 		}
@@ -68,7 +67,7 @@ int all_children_exited(pid_t *pid) {
 		arrray[i] = wait_pid;
 	}
 	for(i = PROGRAM_COUNT; i > 0; i--) {
-		if(arrray[i] == 0) {
+		if(arrray[i] != -1) {
 			return 1;
 		}
 	}
@@ -89,7 +88,7 @@ int main(int argc, char *argv[]) {
 	struct sigaction action;
 	struct sigaction action2;
 	action.sa_handler = hdl;
-	//sigaction(SIGUSR1, &action2, NULL);
+	//set sigalrm handler
 	sigaction(SIGALRM, &action, NULL);
 	FILE *fin;
 
@@ -100,12 +99,17 @@ int main(int argc, char *argv[]) {
 	}
 	//open input file
 	fin = fopen(argv[1], "r");
+	if(fin == NULL) {
+		printf("Cant open text file\n");
+		return 1; 
+	}
 	int program_count = 0;
 	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
 		program_count++;
 	}
 	//close the file so we can reopen it at the beg again
 	fclose(fin);
+	//set global program count
 	PROGRAM_COUNT = program_count;
 	INDEX = PROGRAM_COUNT-1;
 	fin = fopen(argv[1], "r");
@@ -157,11 +161,7 @@ int main(int argc, char *argv[]) {
 			wait_return = sigwait(&signal_set, pointer_signal);
 			if(wait_return > 0) {
 				printf("Error!: Sigwait failed\n");
-			} /*else if( wait_return == 0) {
-				if(*pointer_signal == 10) {
-					printf("received siguser signal\n");
-				}
-			} */
+			} 
 			execvp(args_array[0], args_array);
 			printf("\nError!: Invalid executable\n\n");
 			exit(-1);
@@ -169,14 +169,16 @@ int main(int argc, char *argv[]) {
 		j++;
 	}
 	sleep(3);
+	//call to siguser
 	signaler(pid, SIGUSR1, 0);
 	sleep(3);
+	//stop all children except the last one
 	signaler(pid, SIGSTOP, 1);
 	int k;	
 	time_t now, elapsed;
 	while(1) {
 		int is_exited;
-		//alarm(3);
+		//call to sigalrm then wait for 3
 		now = time(NULL);
 		elapsed = time(NULL) + 3;
 		alarm(3);
@@ -188,7 +190,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		is_exited = all_children_exited(pid);
-		//printf("IS_EXITED: %d\n", is_exited);
+		//check if all the child processes have exited
 		if(is_exited == 0) {
 			break;
 		}

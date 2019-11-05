@@ -68,11 +68,13 @@ void print_pid_status(pid_t pid) {
 	size_t number_read;
 	size_t length = 0;
 	printf("The pid is %d\n", pid);
+	//get the proc folder and the pid status info for our pid
 	snprintf(pidtoread, 50, "/proc/%d/status", pid);
 	fin = fopen(pidtoread, "r");
 	if(fin == NULL) {
 		return;
 	}
+	//print the first 12 lines in the file.
 	int exit = 0;
 	while(exit < 12){
 		getline(&line_buffer, &length, fin);
@@ -92,20 +94,23 @@ void print_pid_status(pid_t pid) {
 	free(line_buffer);
 	
 }
+//check if processes have terminated
 int all_children_exited(pid_t *pid) {
 	int arrray[PROGRAM_COUNT];
 	pid_t wait_pid;
 	int wait_status;
 	int i;
 	for(i = PROGRAM_COUNT; i > 0; i--) {
+		//print the contents of the pid
 		print_pid_status(pid[i]);
 		sleep(3);
+		//clear the terminal
 		system("clear");
 		wait_pid = waitpid(pid[i], &wait_status, WNOHANG);
 		arrray[i] = wait_pid;
 	}
 	for(i = PROGRAM_COUNT; i > 0; i--) {
-		if(arrray[i] == 0) {
+		if(arrray[i] != -1) {
 			return 1;
 		}
 	}
@@ -126,7 +131,7 @@ int main(int argc, char *argv[]) {
 	struct sigaction action;
 	struct sigaction action2;
 	action.sa_handler = hdl;
-	//sigaction(SIGUSR1, &action2, NULL);
+	//call to sigaction
 	sigaction(SIGALRM, &action, NULL);
 	FILE *fin;
 
@@ -137,14 +142,20 @@ int main(int argc, char *argv[]) {
 	}
 	//open input file
 	fin = fopen(argv[1], "r");
+	if(fin == NULL) {
+		printf("Cant open text file\n");
+		return 1;
+	}
 	int program_count = 0;
 	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
 		program_count++;
 	}
 	//close the file so we can reopen it at the beg again
 	fclose(fin);
+	//set global count
 	PROGRAM_COUNT = program_count;
 	INDEX = PROGRAM_COUNT-1;
+	//open the file again
 	fin = fopen(argv[1], "r");
 	int j = 0;
 	pid[program_count];
@@ -206,14 +217,16 @@ int main(int argc, char *argv[]) {
 		j++;
 	}
 	sleep(3);
+	//call to siguser 1
 	signaler(pid, SIGUSR1, 0);
 	sleep(3);
+	//stop all processes but the last one in the array
 	signaler(pid, SIGSTOP, 1);
 	int k;	
 	time_t now, elapsed;
 	while(1) {
 		int is_exited;
-		//alarm(3);
+		//call to alarm and wait 3
 		now = time(NULL);
 		elapsed = time(NULL) + 3;
 		alarm(3);
@@ -225,7 +238,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		is_exited = all_children_exited(pid);
-		//printf("IS_EXITED: %d\n", is_exited);
+		//if all children have exited break and free/return
 		if(is_exited == 0) {
 			break;
 		}

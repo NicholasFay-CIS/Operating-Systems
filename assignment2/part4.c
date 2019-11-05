@@ -62,26 +62,32 @@ void print_pid_status(pid_t pid) {
 	int i;
 	int copy_pid;
 	char path1[50];
-	char pidtoread[10];
-	copy_pid = pid;
-
-	setbuf(stdout, NULL);
+	char pidtoread[50] = "/proc/";
 	FILE *fin;
 	char *line_buffer = NULL;
 	size_t number_read;
 	size_t length = 0;
-	char *proc = "/proc/";
-	char *status = "/status";
-	sprintf(pidtoread, "%d", copy_pid);
-	strcat(path1, proc);
-	strcat(path1, pidtoread);
-	strcat(path1, status);
-
-	fin = fopen(path1, "r");
-	while((number_read = getline(&line_buffer, &length, fin)) != -1) {
-		printf("%s\n", line_buffer);
-	}
 	printf("The pid is %d\n", pid);
+	snprintf(pidtoread, 50, "/proc/%d/status", pid);
+	fin = fopen(pidtoread, "r");
+	if(fin == NULL) {
+		return;
+	}
+	int exit = 0;
+	while(exit < 12){
+		getline(&line_buffer, &length, fin);
+		if(strcmp(line_buffer, "\n") == 0) {
+			continue;
+		}
+		if(strcmp(line_buffer, "\0") == 0) {
+			continue;
+		}
+		if(strcmp(line_buffer, "\0\n") == 0) {
+			continue;
+		}
+		printf("%s", line_buffer);
+		exit++;
+	}
 	fclose(fin);
 	free(line_buffer);
 	
@@ -92,6 +98,9 @@ int all_children_exited(pid_t *pid) {
 	int wait_status;
 	int i;
 	for(i = PROGRAM_COUNT; i > 0; i--) {
+		print_pid_status(pid[i]);
+		sleep(3);
+		system("clear");
 		wait_pid = waitpid(pid[i], &wait_status, WNOHANG);
 		arrray[i] = wait_pid;
 	}
@@ -221,6 +230,8 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 	}
-	//signaler(pid, SIGCONT, 0);
+	free(token);
+	free(line_buffer);
+	fclose(fin);
 	return 1;
 }

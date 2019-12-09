@@ -536,23 +536,26 @@ int main(int argc, char *argv[]) {
 			pthread_t cleanup_t;
 			pthread_create(&cleanup_t, NULL, CleanUp, NULL);
 			pthread_join(cleanup_t, NULL);
-			//Join publisher thread
-			for(l = 0; l < MAXPUBs; l++) {
-				if(pub_t[l].flag == 1) {
-					pthread_join(pub_t[l].id, NULL);
-				}
-			}
-			//Join subscriber threads
-			for(l = 0; l < MAXSUBs; l++) {
-				if(sub_t[l].flag == 1) {
-					pthread_join(sub_t[l].id, NULL);
-				}
-			}
-			//broadcast to all the threads
+			//Broadcast to threads
 			pthread_cond_broadcast(&condition);
 		}
 
 	} while((number_read = getline(&line, &length, config) != -1));
+
+	sleep(5);
+
+	for(l = 0; l < MAXPUBs; l++) {
+		if(pub_t[l].flag == 1) {
+			pthread_join(pub_t[l].id, NULL);
+		}
+	}
+	//Join subscriber threads
+	for(l = 0; l < MAXSUBs; l++) {
+		if(sub_t[l].flag == 1) {
+			pthread_join(sub_t[l].id, NULL);
+		}
+	}
+	//broadcast to all the threads
 	fclose(config);
 	return 1;
 }

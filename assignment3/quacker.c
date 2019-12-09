@@ -545,13 +545,13 @@ int main(int argc, char *argv[]) {
 	sleep(5);
 
 	for(l = 0; l < MAXPUBs; l++) {
-		if(pub_t[l].flag == 1) {
+		if(pub_t[l].flag != 1) {
 			pthread_join(pub_t[l].id, NULL);
 		}
 	}
 	//Join subscriber threads
 	for(l = 0; l < MAXSUBs; l++) {
-		if(sub_t[l].flag == 1) {
+		if(sub_t[l].flag != 1) {
 			pthread_join(sub_t[l].id, NULL);
 		}
 	}
